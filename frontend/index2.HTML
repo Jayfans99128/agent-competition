@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职小猪 - 求职智能助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f0ff 100%);
+            overflow: auto;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 左侧固定区域：职小猪永远不动 */
+        .avatar-section {
+            width: 300px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            pointer-events: none;
+        }
+
+        /* ✅ 核心：网页内实现抠图效果 + 放大 + 固定 */
+        .avatar {
+            width: 280px;
+            height: auto;
+            object-fit: contain;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            background: transparent;
+
+            /* 👇 这一行就是网页里自动“抠图”去背景 */
+            mix-blend-mode: multiply;
+        }
+
+        /* 中间聊天区域 */
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 40px;
+            margin-left: 300px;
+            min-width: 600px;
+        }
+
+        .guide-box {
+            background: linear-gradient(90deg, #cce5ff 0%, #e6f7ff 100%);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .guide-box h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .guide-box ul {
+            list-style: none;
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .hot-questions {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .hot-questions h4 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #0066cc;
+            margin-bottom: 12px;
+        }
+
+        .hot-questions ul {
+            list-style: none;
+        }
+
+        .hot-questions li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #333;
+        }
+
+        .chat-box {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+            min-height: 300px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .bot-msg {
+            color: #333;
+        }
+
+        .user-msg {
+            text-align: right;
+            color: #0066cc;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 14px 20px;
+            border: 1px solid #d0e8ff;
+            border-radius: 30px;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .input-area button {
+            padding: 14px 25px;
+            background: #409eff;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        /* 右侧推荐应用栏 */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-left: 1px solid #e0e8ff;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-list {
+            list-style: none;
+        }
+
+        .app-list li {
+            padding: 15px 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .app-list li:hover {
+            background: #f0f7ff;
+        }
+
+        .app-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="avatar-section">
+        <img class="avatar" src="zhixiaozhu.png" alt="职小猪">
+    </div>
+
+    <div class="chat-section">
+        <div class="guide-box">
+            <h3>【快速操作指南】</h3>
+            <ul>
+                <li>• 回复“1”立刻解锁完整目录，让我带你智能导航~</li>
+                <li>• 自由探索党？当然没问题！直接提问，小职随时接招！</li>
+                <li>• 新手福利：第一次见面，强烈安利试试智能导航，只需回复“1”，一键开启高效求职之旅！</li>
+            </ul>
+            <p style="margin-top:10px; color:#666;">小职已搬好小板凳，就等你啦~</p>
+        </div>
+
+        <div class="hot-questions">
+            <h4>热门问题 <span style="font-size:12px; color:#999; margin-left:auto;">换一批</span></h4>
+            <ul>
+                <li>1. 职业测评及分析 <span>→</span></li>
+                <li>2. 校企合作岗位直通车 <span>→</span></li>
+                <li>3. 简历模板 <span>→</span></li>
+                <li>4. 求职渠道链接 <span>→</span></li>
+            </ul>
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            <div class="message bot-msg">职小猪：你好！我是你的求职智能助手，随时可以为你解答职业规划、简历制作、求职渠道等问题~</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="请输入你的问题">
+            <button onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h3>推荐应用</h3>
+        <ul class="app-list">
+            <li>
+                <div class="app-icon" style="background:#409eff;">👔</div>
+                <span>制作职业照</span>
+            </li>
+            <li>
+                <div class="app-icon" style="background:#ff7d00;">🔍</div>
+                <span>求职网申渠道大全</span>
+            </li>
+            <li>
+                <div class="app-icon" style="background:#67c23a;">🎓</div>
+                <span>校企合作岗位直通车</span>
+            </li>
+            <li>
+                <div class="app-icon" style="background:#909399;">🧠</div>
+                <span>职业性格测评——MBTI</span>
+            </li>
+            <li>
+                <div class="app-icon" style="background:#e6a23c;">📝</div>
+                <span>留言板</span>
+            </li>
+            <li>
+                <div class="app-icon" style="background:#0066cc;">👤</div>
+                <span>人工服务</span>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const chatBox = document.getElementById('chatBox');
+            const text = input.value.trim();
+            if (!text) return;
+
+            chatBox.innerHTML += `<div class="message user-msg">你：${text}</div>`;
+            input.value = '';
+
+            setTimeout(() => {
+                chatBox.innerHTML += `<div class="message bot-msg">职小猪：收到你的消息啦，我会尽快为你解答~</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 500);
+        }
+    </script>
+</body>
+</html>

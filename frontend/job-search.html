@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职小猪 - 职位搜索</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="avatar-wrapper">
+                    <img src="../职小猪.png" alt="职小猪" class="avatar">
+                </div>
+                <h2 class="sidebar-title">职小猪</h2>
+                <p class="sidebar-subtitle">您的智能职业助手</p>
+            </div>
+
+            <nav class="sidebar-features">
+                <a href="index.html" class="feature-item">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                    <span>智能对话</span>
+                </a>
+                <a href="resume.html" class="feature-item">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span>简历分析</span>
+                </a>
+                <a href="job-search.html" class="feature-item active">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <span>职位搜索</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p class="footer-text">Powered by AI</p>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <div class="chat-header">
+                <div class="header-info">
+                    <h1 class="header-title">职位搜索</h1>
+                    <p class="header-status">
+                        <span class="status-dot"></span>
+                        帮你找到最合适的工作机会
+                    </p>
+                </div>
+                <button class="header-action" title="清空对话" onclick="clearJobChat()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="chat-box" class="chat-box">
+                <div class="welcome-section">
+                    <div class="welcome-avatar">
+                        <img src="../职小猪.png" alt="职小猪">
+                    </div>
+                    <h2 class="welcome-title">职位搜索助手</h2>
+                    <p class="welcome-desc">告诉我你的专业、技能和意向，我帮你搜索最匹配的职位</p>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="jobQuickAsk('帮我在网上搜索应届生Java开发岗位')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            Java 开发
+                        </button>
+                        <button class="quick-btn" onclick="jobQuickAsk('帮我搜索产品经理实习生岗位')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            产品经理
+                        </button>
+                        <button class="quick-btn" onclick="jobQuickAsk('帮我搜索数据分析相关的校招岗位')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            数据分析
+                        </button>
+                        <button class="quick-btn" onclick="jobQuickAsk('帮我在网上搜索AI算法工程师岗位要求')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            AI 算法
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="user-input" placeholder="描述你想要的岗位，职小猪帮你搜索..." autocomplete="off">
+                    <button onclick="sendJobMessage()" id="send-btn" class="send-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="input-hint">按 Enter 发送消息</p>
+            </div>
+        </main>
+
+        <nav class="mobile-nav">
+            <div class="mobile-nav-inner">
+                <a href="index.html" class="mobile-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                    智能对话
+                </a>
+                <a href="resume.html" class="mobile-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    简历分析
+                </a>
+                <a href="job-search.html" class="mobile-nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    职位搜索
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <script src="job-search.js"></script>
+</body>
+</html>

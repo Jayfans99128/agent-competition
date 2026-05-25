@@ -1,0 +1,33 @@
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment variables (API keys, etc.)
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Screenshots / temp files
+示例界面.png
+简历.txt
+简历示例.docx
+
+# Build / distribution
+dist/
+build/
+*.egg-info/
+
+# Frontend
+frontend/server.py
