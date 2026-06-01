@@ -15,7 +15,18 @@ from backend.config import client, MODEL
 from backend.tools import TOOLS, TOOL_MAP
 
 # ---------- 日志 ----------
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "app.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+    ],
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -38,6 +49,11 @@ def index2():
 @app.route("/resume.html")
 def resume():
     return send_from_directory(FRONTEND_DIR, "resume.html")
+
+
+@app.route("/interview.html")
+def interview():
+    return send_from_directory(FRONTEND_DIR, "interview.html")
 
 
 @app.route("/job-search.html")
@@ -63,6 +79,15 @@ CHAT_PROMPT = """你是一位就业指导专家，服务对象是在校学生和
 3. 口语化：像同学聊天一样说话，多用"你"，少用书面语和官腔。
 4. 给干货：直接给具体建议、步骤、例子，不要铺垫和空话。
 5. 如果问题太宽泛，先反问用户一个具体问题来缩小范围，而不是直接写一大段。
+
+【考试查询工具】
+- 用户问考研（研究生考试）分数线、国家线、大学复试线、报考人数 → 用 query_kaoyan_scores
+- 用户问考研院校信息（大学推荐专业、硕士点、博士点、招生专业目录、考试科目、985/211/双一流）→ 用 query_kaoyan_school
+- 用户问国考（公务员考试）分数线、进面分、省份部门分数线、报考人数 → 用 query_guokao_scores
+- 提到具体岗位时，顺便输出该岗位对应年份的报考人数
+- 用户问考研备考资料（教材推荐、复习方法、备考规划、网课等）或考公备考资料（行测/申论学习方法、面试技巧、选岗建议等）→ 用 query_doubao 查询豆包大模型，然后将其回答重新整理为简洁、口语化、分点列出的干货回复
+- 分数线等硬数据用 query_kaoyan_scores / query_guokao_scores，院校信息用 query_kaoyan_school，备考方法等软信息用 query_doubao
+
 使用中文回复。"""
 
 RESUME_PROMPT = """你是一位简历分析师，服务对象是在校学生。用户已上传简历。
@@ -74,6 +99,23 @@ RESUME_PROMPT = """你是一位简历分析师，服务对象是在校学生。�
 5. 一次只说最重要的1-3个点，不要面面俱到。
 使用中文回复。"""
 
+INTERVIEW_PROMPT = """你是一位专业的模拟面试官，服务对象是在校学生和应届生。你的任务是为用户进行模拟面试练习。
+
+【面试流程】
+1. 如果用户没有说明自己的专业和目标岗位，必须先问清楚这两点再开始。不要替用户假设专业或岗位
+2. 了解用户背景后，开始正式的模拟面试，每次只问一个问题
+3. 根据用户的回答，给予简短点评（一句话），然后继续下一个问题
+4. 每轮面试问3-5个问题即可，结束时给出总体评价
+
+【核心规则】
+1. 一次只问一个问题，不要一次性抛出多个问题
+2. 问题要有针对性，根据用户说的岗位方向来问
+3. 点评要具体、有建设性，不要只说"回答得不错"
+4. 保持专业但友好的面试官语气
+5. 总体评价包含：优点、不足、改进建议，每条一句话
+
+使用中文回复。"""
+
 JOB_PROMPT = """你是一位职位搜索与推荐专家，服务对象是在校学生和应届生。
 【核心规则】
 1. 紧扣问题：先看用户问了什么，只回答那一两个点，不要把所有功能都用上。
@@ -81,12 +123,36 @@ JOB_PROMPT = """你是一位职位搜索与推荐专家，服务对象是在校�
 3. 岗位推荐直接给：公司名+岗位名+一句话亮点，不要长篇介绍。
 4. 口语化：像朋友分享招聘信息一样，轻松直接。
 5. 如果用户没说清楚意向行业/岗位，先反问一个具体问题确认方向。
+
+【考试查询工具】
+- 用户问考研（研究生考试）分数线、国家线、大学复试线、报考人数 → 用 query_kaoyan_scores
+- 用户问考研院校信息（大学推荐专业、硕士点、博士点、招生专业目录、考试科目、985/211/双一流）→ 用 query_kaoyan_school
+- 用户问国考（公务员考试）分数线、进面分、省份部门分数线、报考人数 → 用 query_guokao_scores
+- 提到具体岗位时，顺便输出该岗位对应年份的报考人数
+- 用户问考研备考资料（教材推荐、复习方法、备考规划、网课等）或考公备考资料（行测/申论学习方法、面试技巧、选岗建议等）→ 用 query_doubao 查询豆包大模型，然后将其回答重新整理为简洁、口语化、分点列出的干货回复
+- 分数线等硬数据用 query_kaoyan_scores / query_guokao_scores，院校信息用 query_kaoyan_school，备考方法等软信息用 query_doubao
+
 使用中文回复。"""
 
-# ----- Agent 实例 -----
-chat_agent = Agent(client=client, model=MODEL, system_prompt=CHAT_PROMPT, tools=TOOLS, tool_map=TOOL_MAP)
-resume_agent = Agent(client=client, model=MODEL, system_prompt=RESUME_PROMPT, tools=TOOLS, tool_map=TOOL_MAP)
-job_agent = Agent(client=client, model=MODEL, system_prompt=JOB_PROMPT, tools=TOOLS, tool_map=TOOL_MAP)
+# ----- 用户隔离的 Agent 实例 -----
+user_agents = {}  # {user_id: {"chat": Agent, "resume": Agent, "job": Agent, "interview": Agent}}
+
+
+def _get_user_id():
+    """从请求头获取用户 ID"""
+    return request.headers.get("X-User-Id", "anonymous")
+
+
+def _get_user_agents(user_id):
+    """获取或创建某个用户的 Agent 实例"""
+    if user_id not in user_agents:
+        user_agents[user_id] = {
+            "chat": Agent(client=client, model=MODEL, system_prompt=CHAT_PROMPT, tools=TOOLS, tool_map=TOOL_MAP),
+            "resume": Agent(client=client, model=MODEL, system_prompt=RESUME_PROMPT, tools=TOOLS, tool_map=TOOL_MAP),
+            "job": Agent(client=client, model=MODEL, system_prompt=JOB_PROMPT, tools=TOOLS, tool_map=TOOL_MAP),
+            "interview": Agent(client=client, model=MODEL, system_prompt=INTERVIEW_PROMPT, tools=TOOLS, tool_map=TOOL_MAP),
+        }
+    return user_agents[user_id]
 
 
 # ----- 文件文本提取 -----
@@ -118,7 +184,8 @@ def chat_api():
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
 
-    reply = chat_agent.chat(user_message)
+    agents = _get_user_agents(_get_user_id())
+    reply = agents["chat"].chat(user_message)
     return jsonify({"reply": reply})
 
 
@@ -129,7 +196,8 @@ def resume_chat():
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
 
-    reply = resume_agent.chat(user_message)
+    agents = _get_user_agents(_get_user_id())
+    reply = agents["resume"].chat(user_message)
     return jsonify({"reply": reply})
 
 
@@ -140,7 +208,8 @@ def job_chat():
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
 
-    reply = job_agent.chat(user_message)
+    agents = _get_user_agents(_get_user_id())
+    reply = agents["job"].chat(user_message)
     return jsonify({"reply": reply})
 
 
@@ -200,11 +269,12 @@ def upload_resume():
     if os.path.exists(filepath):
         os.remove(filepath)
 
-    resume_agent.history.append({
+    agents = _get_user_agents(_get_user_id())
+    agents["resume"].history.append({
         "role": "user",
         "content": f"【用户已上传简历，内容如下】\n\n{content}"
     })
-    resume_agent.history.append({
+    agents["resume"].history.append({
         "role": "assistant",
         "content": f"好的，我已收到你的简历。以下是我的初步分析：\n\n{analysis}"
     })
@@ -233,17 +303,26 @@ def _get_history(agent):
 
 @app.route("/chat/history", methods=["GET"])
 def chat_history():
-    return jsonify({"messages": _get_history(chat_agent)})
+    agents = _get_user_agents(_get_user_id())
+    return jsonify({"messages": _get_history(agents["chat"])})
 
 
 @app.route("/resume-chat/history", methods=["GET"])
 def resume_chat_history():
-    return jsonify({"messages": _get_history(resume_agent)})
+    agents = _get_user_agents(_get_user_id())
+    return jsonify({"messages": _get_history(agents["resume"])})
 
 
 @app.route("/job-chat/history", methods=["GET"])
 def job_chat_history():
-    return jsonify({"messages": _get_history(job_agent)})
+    agents = _get_user_agents(_get_user_id())
+    return jsonify({"messages": _get_history(agents["job"])})
+
+
+@app.route("/interview/history", methods=["GET"])
+def interview_history():
+    agents = _get_user_agents(_get_user_id())
+    return jsonify({"messages": _get_history(agents["interview"])})
 
 
 # ---------- 流式 API ----------
@@ -260,8 +339,9 @@ def chat_stream_api():
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
+    agents = _get_user_agents(_get_user_id())
     return Response(
-        stream_with_context(_stream_reply(chat_agent, user_message)),
+        stream_with_context(_stream_reply(agents["chat"], user_message)),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
@@ -273,8 +353,9 @@ def resume_chat_stream_api():
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
+    agents = _get_user_agents(_get_user_id())
     return Response(
-        stream_with_context(_stream_reply(resume_agent, user_message)),
+        stream_with_context(_stream_reply(agents["resume"], user_message)),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
@@ -286,8 +367,23 @@ def job_chat_stream_api():
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
+    agents = _get_user_agents(_get_user_id())
     return Response(
-        stream_with_context(_stream_reply(job_agent, user_message)),
+        stream_with_context(_stream_reply(agents["job"], user_message)),
+        mimetype="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )
+
+
+@app.route("/interview/stream", methods=["POST"])
+def interview_stream_api():
+    data = request.json
+    user_message = data.get("message", "").strip()
+    if not user_message:
+        return jsonify({"error": "消息不能为空"}), 400
+    agents = _get_user_agents(_get_user_id())
+    return Response(
+        stream_with_context(_stream_reply(agents["interview"], user_message)),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )

@@ -1,33 +1,144 @@
 # Python virtual environment
 .venv/
+venv/
+env/
+envs/
+.venv-local/
 
 # Python cache
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
+.Python
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+*.EGG-INFO/
+.installed.cfg
+*.egg
 
 # Environment variables (API keys, etc.)
 .env
+.env.local
+.env.*.local
+.env.example
+.env.test
+.env.development
+.env.production
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.swn
+.*.swp
+.*.swo
+.*.swn
+.vscode/settings.json
+.vscode/workspace.json
+.vscode/launch.json
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+*.DS_Store
 
 # Screenshots / temp files
-示例界面.png
-简历.txt
-简历示例.docx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.pdf
+*.docx
+*.xlsx
+*.pptx
 
 # Build / distribution
 dist/
 build/
 *.egg-info/
+*.egg
+*.whl
+*.tar.gz
+*.zip
+*.exe
+*.msi
 
-# Frontend
-frontend/server.py
+# Logs
+*.log
+logs/
+log/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*~
+
+# Editor backup files
+*~.backup
+*~.tmp
+*.bak.*
+*.old.*
+
+# Mac specific
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.AppleDesktop
+Icon
+.DS_Store*
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Python IDE files
+.pytest_cache/
+.pytest.ini
+.coverage
+.coverage.*
+
+# Local config files
+local_settings.py
+local_config.py
+
+# Data files (if you want to exclude them)
+data/
+*.db
+*.sqlite3
+*.csv
+*.json
+*.xml
+
+# Web server files
+website/
+static/
+templates/
+public/
+
+# Python packaging
+*.dist-info
+*.tar.bz2
+*.tar.gz
+*.tar.xz
+*.tar.Z
+*.whl
+
+# IDE cache and config files
+*.iml
+*.iws
+*.ipr
+*.log

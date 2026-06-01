@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职小猪 - 模拟面试</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="avatar-wrapper">
+                    <img src="./职小猪.png" alt="职小猪" class="avatar">
+                </div>
+                <h2 class="sidebar-title">职小猪</h2>
+                <p class="sidebar-subtitle">您的智能职业助手</p>
+            </div>
+
+            <nav class="sidebar-features">
+                <a href="index.html" class="feature-item">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                    <span>智能对话</span>
+                </a>
+                <a href="resume.html" class="feature-item">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span>简历分析</span>
+                </a>
+                <a href="interview.html" class="feature-item active">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        <polyline points="22 14 21 4 11 9 1 4 1 20"/>
+                    </svg>
+                    <span>模拟面试</span>
+                </a>
+                <a href="job-search.html" class="feature-item">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <span>职位搜索</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-history" id="sidebar-history">
+                <div class="history-header">
+                    <span class="history-title">历史对话</span>
+                    <button class="history-new-btn" onclick="startNewInterview()" title="新面试">+</button>
+                </div>
+                <div class="history-list" id="history-list">
+                    <p class="history-empty">暂无历史对话</p>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <svg class="user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span id="current-user-name">未设置昵称</span>
+                </div>
+                <button class="user-switch-btn" onclick="changeUser()" title="切换用户">切换</button>
+                <p class="footer-text">Powered by 职通车队</p>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <div class="chat-header">
+                <button class="mobile-menu-btn" onclick="toggleMobileDrawer()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div class="header-info">
+                    <h1 class="header-title">模拟面试</h1>
+                    <p class="header-status">
+                        <span class="status-dot"></span>
+                        专业面试官在线模拟
+                    </p>
+                </div>
+                <button class="header-action" title="结束面试" onclick="endInterview()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="chat-box" class="chat-box">
+                <div class="welcome-section">
+                    <div class="welcome-avatar">
+                        <img src="../职小猪.png" alt="职小猪">
+                    </div>
+                    <h2 class="welcome-title">模拟面试练习</h2>
+                    <p class="welcome-desc">选择面试类型，开始你的模拟面试练习吧</p>
+                    <div class="quick-actions">
+                        <button class="quick-btn" onclick="startInterviewType('技术面')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                            </svg>
+                            技术面试
+                        </button>
+                        <button class="quick-btn" onclick="startInterviewType('HR面')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            HR 面试
+                        </button>
+                        <button class="quick-btn" onclick="startInterviewType('群面')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                            </svg>
+                            群面模拟
+                        </button>
+                        <button class="quick-btn" onclick="startInterviewType('产品面')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            产品面试
+                        </button>
+                        <button class="quick-btn" onclick="startInterviewType('行为面')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                            </svg>
+                            行为面试
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="user-input" placeholder="输入你的回答..." autocomplete="off">
+                    <button onclick="sendInterviewMessage()" id="send-btn" class="send-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="input-hint">按 Enter 发送消息</p>
+            </div>
+        </main>
+
+        <nav class="mobile-nav">
+            <div class="mobile-nav-inner">
+                <a href="index.html" class="mobile-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                    智能对话
+                </a>
+                <a href="resume.html" class="mobile-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    简历分析
+                </a>
+                <a href="interview.html" class="mobile-nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                        <polyline points="22 14 21 4 11 9 1 4 1 20"/>
+                    </svg>
+                    模拟面试
+                </a>
+                <a href="job-search.html" class="mobile-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    职位搜索
+                </a>
+            </div>
+        </nav>
+
+        <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" onclick="toggleMobileDrawer()"></div>
+        <div class="mobile-drawer" id="mobile-drawer">
+            <div class="mobile-drawer-header">
+                <span>历史对话</span>
+                <button onclick="toggleMobileDrawer()" class="mobile-drawer-close">&times;</button>
+            </div>
+            <div class="mobile-drawer-history" id="mobile-history-list">
+                <p class="history-empty">暂无历史对话</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="interview.js"></script>
+</body>
+</html>

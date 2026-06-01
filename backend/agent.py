@@ -38,7 +38,7 @@ class Agent:
             "content": user_input
         })
 
-        for _ in range(3):
+        for _ in range(5):
 
             try:
 
@@ -104,7 +104,7 @@ class Agent:
             "content": user_input
         })
 
-        for _ in range(3):
+        for _ in range(5):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model,
