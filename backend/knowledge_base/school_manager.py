@@ -7,6 +7,8 @@ import os
 import re
 from backend.network.session import fetch_url
 
+from . import clean_text, filter_context_for_llm
+
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -17,7 +19,7 @@ def _load_kaoyan_data():
         return []
 
     with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
+        content = clean_text(f.read())
 
     entries = []
     # 匹配【标题】和其后的内容
@@ -199,7 +201,7 @@ def query_kaoyan_school(query: str) -> str:
                     '- 主流专业介绍\n'
                     '- 院校分数情况\n'
                 )
-                return formatted
+                return filter_context_for_llm(formatted)
 
             # 如果只有分数线条目
             if score_entries:
@@ -214,7 +216,7 @@ def query_kaoyan_school(query: str) -> str:
                     '- 如需该院校详细信息，请对我说"帮我查[院校名]简介和专业设置"\n'
                     '- 如需最新数据，请对我说"帮我联网搜索[院校名]"\n'
                 )
-                return formatted
+                return filter_context_for_llm(formatted)
 
     # 策略2：数据库无数据时，返回引导信息
     return (

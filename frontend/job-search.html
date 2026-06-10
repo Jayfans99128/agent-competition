@@ -101,6 +101,21 @@
                     </div>
                     <h2 class="welcome-title">职位搜索助手</h2>
                     <p class="welcome-desc">告诉我你的专业、技能和意向，我帮你搜索最匹配的职位</p>
+                    <div class="job-links-card">
+                        <div class="job-links-title">🔗 常用求职渠道</div>
+                        <div class="job-links-grid">
+                            <a href="https://www.yingjiesheng.com" target="_blank" class="job-link-item">🎓 应届生求职网</a>
+                            <a href="https://www.iguopin.com" target="_blank" class="job-link-item">🏢 国聘网</a>
+                            <a href="https://job.ncss.cn" target="_blank" class="job-link-item">🏫 国家大学生就业服务平台</a>
+                            <a href="https://www.zhaopin.com" target="_blank" class="job-link-item">💼 智联招聘</a>
+                            <a href="https://www.51job.com" target="_blank" class="job-link-item">📋 前程无忧</a>
+                            <a href="https://www.zhipin.com" target="_blank" class="job-link-item">💬 BOSS直聘</a>
+                            <a href="https://www.nowcoder.com" target="_blank" class="job-link-item">💻 牛客网</a>
+                            <a href="https://www.liepin.com" target="_blank" class="job-link-item">🎯 猎聘网</a>
+                            <a href="https://www.lagou.com" target="_blank" class="job-link-item">🚀 拉勾网</a>
+                            <a href="https://campus.chinahr.com" target="_blank" class="job-link-item">🏆 中华英才网</a>
+                        </div>
+                    </div>
                     <div class="quick-actions">
                         <button class="quick-btn" onclick="jobQuickAsk('帮我在网上搜索应届生Java开发岗位')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,13 +145,13 @@
                             </svg>
                             AI 算法
                         </button>
-                        <button class="quick-btn" onclick="jobQuickAsk('帮我查一下2025年考研工学国家线和报考人数')">
+                        <button class="quick-btn" onclick="jobQuickAsk('帮我查一下2026年考研工学国家线和报考人数')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 6 3 6 3s6-1 6-3v-5"/>
                             </svg>
                             考研分数线
                         </button>
-                        <button class="quick-btn" onclick="jobQuickAsk('帮我查2025年国考广东省税务局的进面分数线和报考人数')">
+                        <button class="quick-btn" onclick="jobQuickAsk('帮我查2026年国考广东省税务局的进面分数线和报考人数')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>
                             </svg>
@@ -148,7 +163,7 @@
 
             <div class="input-area">
                 <div class="input-wrapper">
-                    <input type="text" id="user-input" placeholder="描述你想要的岗位，职小猪帮你搜索..." autocomplete="off">
+                    <textarea id="user-input" placeholder="描述你想要的岗位，职小猪帮你搜索..." rows="1"></textarea>
                     <button onclick="sendJobMessage()" id="send-btn" class="send-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -156,7 +171,7 @@
                         </svg>
                     </button>
                 </div>
-                <p class="input-hint">按 Enter 发送消息</p>
+                <p class="input-hint">按 Enter 发送，Shift + Enter 换行</p>
             </div>
         </main>
 

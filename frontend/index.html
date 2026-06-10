@@ -120,13 +120,13 @@
                             </svg>
                             简历技巧
                         </button>
-                        <button class="quick-btn" onclick="quickAsk('帮我查一下2025年考研工学国家线')">
+                        <button class="quick-btn" onclick="quickAsk('帮我查一下2026年考研工学国家线')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 6 3 6 3s6-1 6-3v-5"/>
                             </svg>
                             考研分数线
                         </button>
-                        <button class="quick-btn" onclick="quickAsk('帮我查2025年国考北京的进面分数线')">
+                        <button class="quick-btn" onclick="quickAsk('帮我查2026年国考北京的进面分数线')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>
                             </svg>
@@ -140,11 +140,11 @@
                 <div class="input-wrapper">
                     <button class="menu-btn" onclick="toggleMenu()">+</button>
                         <div class="popup_menu" id="popupMenu">
-                            <div onclick="quickAsk('帮我查一下2025年考研工学国家线和报考人数')">
-                                📚 查询考研信息
+                            <div onclick="quickAsk('帮我制定一份考研/考公的备考规划和复习时间安排')">
+                                📚 备考规划
                             </div>
-                            <div onclick="quickAsk('帮我查2025年国考北京的进面分数线和报考人数')">
-                                🏛️ 查询国考信息
+                            <div onclick="quickAsk('推荐一些考研/考公的备考书籍和学习资料')">
+                                📖 书籍资料推荐
                             </div>
                             <div onclick="quickAsk('我面试前应该做哪些准备？')">
                                 💼 面试准备
@@ -155,8 +155,11 @@
                             <div onclick="quickAsk('给我一些写简历的实用技巧')">
                                 📝 简历技巧
                             </div>
+                            <div onclick="openPersonalityTest()">
+                                🧠 MBTI 职业性格测试
+                            </div>
                         </div>
-                    <input type="text" id="user-input" placeholder="输入您的问题，职小猪为您解答..." autocomplete="off">
+                    <textarea id="user-input" placeholder="输入您的问题，职小猪为您解答..." rows="1"></textarea>
                     <button onclick="sendMessage()" id="send-btn" class="send-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -164,7 +167,7 @@
                         </svg>
                     </button>
                 </div>
-                <p class="input-hint">按 Enter 发送消息</p>
+                <p class="input-hint">按 Enter 发送，Shift + Enter 换行</p>
             </div>
         </main>
 
@@ -213,5 +216,18 @@
 
     <script src="auth.js"></script>
     <script src="app.js"></script>
+
+    <!-- ===== 职业性格测试弹窗 ===== -->
+    <div class="test-overlay" id="testOverlay" onclick="closeTest()"></div>
+    <div class="test-modal" id="testModal">
+        <div class="test-header">
+            <h2>🧠 MBTI 职业性格测试</h2>
+            <p>20道选择题，帮你找到适合的职业方向</p>
+            <button class="test-close" onclick="closeTest()">&times;</button>
+        </div>
+        <div class="test-body" id="testBody">
+            <!-- 由 JS 动态渲染 -->
+        </div>
+    </div>
 </body>
 </html>

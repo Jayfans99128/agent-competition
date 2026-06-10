@@ -1,6 +1,8 @@
 import os
 import re
 
+from . import clean_text, filter_context_for_llm
+
 _KB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "knowledge_base_data.txt")
 _sections: list[dict] = []
 
@@ -12,7 +14,8 @@ def _load_kb():
         return _sections
 
     with open(_KB_PATH, "r", encoding="utf-8") as f:
-        all_lines = [l.strip() for l in f]
+        raw = clean_text(f.read())
+    all_lines = [l.strip() for l in raw.split('\n')]
 
     # 第一步：找出所有岗位标题的位置
     # 岗位标题 = 一行文字，下一非空行包含"工作介绍"
@@ -104,6 +107,10 @@ def _load_kb():
                 pending_key = None
 
         # 也处理跨行内容（多行归属于同一 key）
+        # 压缩所有字段的多余空白和换行
+        for k in list(fields.keys()):
+            fields[k] = ' '.join(str(fields[k]).split())
+
         _sections.append(fields)
 
     return _sections
@@ -167,16 +174,16 @@ def query_knowledge_base(query: str) -> str:
                     current_chunk.append(line)
 
         if kaoyan_sections:
-            # 为了显示清晰，我们只返回有明确考研信息的段落
             lines = []
-            for s in kaoyan_sections[:3]:  # 只显示前3个相关的
-                lines.append("【{}】".format(s.get('标题', '考研数据')))
+            for s in kaoyan_sections[:3]:
+                parts = ["【{}】".format(s.get('标题', '考研数据'))]
                 for k, v in s.items():
                     if k == "标题":
                         continue
-                    lines.append("  {}: {}".format(k, v))
-                lines.append("")
-            return "\n".join(lines)
+                    clean_v = ' '.join(str(v).split())
+                    parts.append("{}: {}".format(k, clean_v))
+                lines.append('；'.join(parts))
+            return filter_context_for_llm('\n'.join(lines))
 
     # 对于车辆工程岗位查询
     # 按岗位名称匹配
@@ -205,16 +212,29 @@ def query_knowledge_base(query: str) -> str:
             no_result += "知识库包含以下岗位方向：整车研发类（总布置、车身、底盘、动力总成、电池、电控、整车性能、电机、NVH、CAE仿真、CFD、热管理、空气动力学、碰撞安全、ADAS、自动驾驶算法、自动驾驶测试、智能座舱、车联网）、制造工艺类、软件开发类、销售市场类等。请尝试更具体的岗位名称搜索。"
         return no_result
 
+    # 超过5个结果：只返回岗位名+一句话概述，不多给详情
+    if len(top) > 5:
+        lines = ['匹配到以下车辆工程岗位：']
+        for s in top:
+            intro = s.get('工作介绍', '')
+            # 取第一句话
+            one_line = intro.split('。')[0].strip() if intro else ''
+            if len(one_line) > 80:
+                one_line = one_line[:80] + '...'
+            lines.append(f'• {s["job"]}：{one_line}')
+        return filter_context_for_llm('\n'.join(lines))
+
+    # 3-5个结果：返回字段摘要（每个字段只取前60字）
     lines = []
     for s in top:
-        lines.append(f"【{s['job']}】")
+        parts = [f"【{s['job']}】"]
         for k, v in s.items():
             if k == "job":
                 continue
-            lines.append(f"  {k}：{v}")
-        lines.append("")
-
-    return "\n".join(lines)
+            clean_v = ' '.join(str(v).split())[:60]
+            parts.append(f"{k}：{clean_v}")
+        lines.append('；'.join(parts))
+    return filter_context_for_llm('\n'.join(lines))
 
 def _extract_kaoyan_data(lines):
     """从行列表中提取考研数据段落"""

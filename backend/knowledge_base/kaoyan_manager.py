@@ -1,90 +1,152 @@
 import os
 import re
 
+from . import clean_text, filter_context_for_llm
+
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _segment_chinese_query(query):
+    """把搜索词切成更细的 token，解决中文不带空格的问题"""
+    tokens = query.lower().split()
+    refined = []
+    for token in tokens:
+        parts = re.split(r'([一-鿿]+)', token)
+        for p in parts:
+            p = p.strip()
+            if not p:
+                continue
+            if re.fullmatch(r'[一-鿿]+', p):
+                # 纯中文词：按常见边界词细分，确保专业名、学校名等关键 token 被正确切出
+                sub = re.split(
+                    r'(分数线|复试线|复试分|复试资格线|国家线|报考|报录|录取'
+                    r'|专业|学院|大学|年|的|在|和|与|及|或|是|有)',
+                    p
+                )
+                for s in sub:
+                    s = s.strip()
+                    if s:
+                        refined.append(s)
+            else:
+                refined.append(p)
+    seen = set()
+    result = []
+    for t in refined:
+        if t not in seen:
+            seen.add(t)
+            result.append(t)
+    return result
+
+
+def _extract_year_aliases(query):
+    """从查询中提取可能的年份别名"""
+    aliases = set()
+    m = re.search(r'(?<!\d)(\d{2})年', query)
+    if m:
+        short = m.group(1)
+        if 20 <= int(short) <= 99:
+            aliases.add(f'20{short}')
+    m = re.search(r'(20\d{2})年', query)
+    if m:
+        aliases.add(m.group(1))
+    m = re.search(r'(20\d{2})', query)
+    if m:
+        aliases.add(m.group(1))
+    return aliases
+
+
 def query_kaoyan_data(query: str) -> str:
     """
     专门查询考研相关数据
     """
-    kaoyan_data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "kaoyan_data.txt")
+    kaoyan_data_path = os.path.join(DATA_DIR, "kaoyan_data.txt")
 
     # 检查考研数据文件是否存在
     if not os.path.exists(kaoyan_data_path):
         return "考研数据文件未找到，请检查文件是否存在。"
 
     with open(kaoyan_data_path, "r", encoding="utf-8") as f:
-        content = f.read()
+        content = clean_text(f.read())
 
-    # 处理查询请求
-    # 将查询拆分成关键词
-    keywords = query.split()
-    if not keywords:
-        return "请输入有效的考研相关关键词，如'2026年国家线'、'清华大学复试分数'等。"
+    # 处理查询请求：先按 exam_manager 方式加载结构化条目
+    pattern = r'【(.+?)】\n(.*?)(?=\n【|\Z)'
+    matches = re.findall(pattern, content, re.DOTALL)
 
-    # 检查是否包含考研关键信息
-    kaoyan_keywords = ['考研', '复试', '分数线', '国家线', '报考人数', '报录比', '2026', '2025', '2024', '考研招生', '复试要求']
+    entries = []
+    for title, body in matches:
+        entry = {'title': title.strip(), 'body': body.strip()}
+        for line in body.strip().split('\n'):
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '：' in line:
+                key, val = line.split('：', 1)
+                entry[key.strip()] = val.strip()
+        entries.append(entry)
 
-    # 搜索包含关键词的内容段落
-    lines = content.split('\n')
-    matching_sections = []
+    if not entries:
+        return "考研数据文件为空。"
 
-    # 搜索含有考研相关信息的段落
-    current_section = []
-    section_start = -1
+    # 分词和年份别名
+    query_lower = query.lower()
+    keywords = _segment_chinese_query(query_lower)
+    year_aliases = _extract_year_aliases(query_lower)
 
-    for i, line in enumerate(lines):
-        # 当发现考研相关信息开始时
-        if any(keyword in line for keyword in kaoyan_keywords) and len(current_section) == 0:
-            section_start = i
-            current_section = [line]
-        elif section_start != -1:
-            # 如果当前行是空行并遇到了下一个段落的开始
-            if line.strip() == '' and any(keyword in lines[xx] for xx in range(i, min(i+5, len(lines))) for keyword in kaoyan_keywords):
-                # 这个段落结束，但接下来又找到了考研相关内容，所以继续
-                current_section.append(line)
-            elif line.strip() == '' or i >= len(lines) - 1:
-                # 段落结束
-                if len(current_section) > 0:
-                    # 检查段落是否与查询相关
-                    section_text = " ".join(current_section)
-                    # 判断是否相关
-                    if any(keyword in section_text for keyword in keywords):
-                        matching_sections.append("\n".join(current_section))
-                    current_section = []
-                    section_start = -1
-                else:
-                    current_section = []
-                    section_start = -1
-            else:
-                if section_start != -1:
-                    current_section.append(line)
+    # 打分排序
+    scored = []
+    for entry in entries:
+        title = entry.get('title', '').lower()
+        body = entry.get('body', '').lower()
+        full_text = title + ' ' + body
 
-    # 简化处理：返回包含关键词的前三个段落
-    matching_lines = []
-    keyword_matches = []
+        score = 0.0
+        for word in keywords:
+            if word in title:
+                score += 10
+            if word in body:
+                score += 3
+            for char in word:
+                if char in full_text:
+                    score += 0.1
 
-    for line in lines:
-        line_content = line.strip()
-        if not line_content:
-            continue
-        line_content_lower = line_content.lower()
-        if any(keyword.lower() in line_content_lower for keyword in keywords):
-            keyword_matches.append(line_content)
-            if len(keyword_matches) >= 5:  # 限制返回结果数量
-                break
+        for year in year_aliases:
+            if year in title:
+                score += 15
+            elif year in body:
+                score += 5
 
-    if keyword_matches:
-        return "找到相关的考研数据:\n\n" + "\n".join(keyword_matches[:5])
+        if '复试线' in keywords and '复试分数线' not in keywords:
+            if '复试分数线' in title:
+                score += 8
 
-    # 如果没有找到明确匹配，返回一些通用提示
-    return (
-        "在考研数据中未找到明确相关结果。\n\n"
-        "建议您查询具体信息，如：\n"
-        "1. '2026年国家线'\n"
-        "2. '清华大学复试分数'\n"
-        "3. '2026年考研复试流程'\n"
-        "4. '北京大学考研分数线'\n"
-        "5. '研究生复试要求'"
-    )
+        if score > 0:
+            scored.append((score, entry))
+
+    if not scored:
+        return (
+            "在考研数据中未找到明确相关结果。\n\n"
+            "建议您查询具体信息，如：\n"
+            "1. '2026年国家线'\n"
+            "2. '清华大学复试分数'\n"
+            "3. '2026年考研复试流程'\n"
+            "4. '北京大学考研分数线'\n"
+            "5. '研究生复试要求'"
+        )
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top = scored[:8]
+
+    lines = []
+    for score, entry in top:
+        title = entry.get('title', '')
+        parts = [f'【{title}】']
+        for key, val in entry.items():
+            if key not in ('title', 'body'):
+                clean_v = ' '.join(str(val).split())
+                parts.append(f'{key}：{clean_v}')
+        lines.append('；'.join(parts))
+
+    return filter_context_for_llm('\n'.join(lines))
 
 def query_kaoyan_scores(query: str) -> str:
     """

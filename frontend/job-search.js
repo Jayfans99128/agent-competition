@@ -175,6 +175,7 @@ async function sendJobMessage() {
     ensureSession();
     saveHistoryItem(text, 'user');
     input.value = '';
+    resetInputHeight();
     showTyping();
 
     try {
@@ -257,6 +258,17 @@ document.getElementById('user-input').addEventListener('keydown', function (e) {
         sendJobMessage();
     }
 });
+
+// ===== 输入框自动增高 =====
+document.getElementById('user-input').addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+function resetInputHeight() {
+    const input = document.getElementById('user-input');
+    input.style.height = 'auto';
+}
 
 // ===== 页面初始化 =====
 loadJobHistory();

@@ -280,6 +280,7 @@ async function sendResumeMessage() {
     ensureSession();
     saveHistoryItem(text, 'user');
     input.value = '';
+    resetInputHeight();
     showTyping();
 
     try {
@@ -332,6 +333,54 @@ function resumeQuickAsk(text) {
     sendResumeMessage();
 }
 
+// ===== 下载优化后的简历 =====
+async function downloadModifiedResumeFromResume() {
+    // 显示生成中的提示
+    const chatBox = document.getElementById('chat-box');
+    const statusMsg = document.createElement('div');
+    statusMsg.className = 'message bot-message';
+    statusMsg.innerHTML = '<span class="spinner"></span> 正在生成优化后的简历...';
+    chatBox.appendChild(statusMsg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        const resp = await fetch('/modify-resume', {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({}),
+        });
+        const data = await resp.json();
+
+        statusMsg.remove();
+
+        if (data.error) {
+            addMessage('生成失败：' + data.error, 'bot-message');
+            return;
+        }
+
+        // 触发下载
+        const a = document.createElement('a');
+        a.href = data.download_url;
+        a.download = '优化后简历.docx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // 显示预览
+        const previewMsg = document.createElement('div');
+        previewMsg.className = 'message bot-message resume-preview';
+        previewMsg.innerHTML = '<strong>优化后的简历已生成并开始下载</strong><br><br>' +
+            data.improved_resume.replace(/\n/g, '<br>');
+        chatBox.appendChild(previewMsg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        saveHistoryItem('优化后的简历已生成并下载', 'assistant');
+
+    } catch (err) {
+        statusMsg.remove();
+        addMessage('请求失败：' + err.message, 'bot-message');
+    }
+}
+
 // ===== 重置 =====
 function resetResume() {
     selectedFile = null;
@@ -372,6 +421,17 @@ document.getElementById('user-input').addEventListener('keydown', function (e) {
         sendResumeMessage();
     }
 });
+
+// ===== 输入框自动增高 =====
+document.getElementById('user-input').addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+function resetInputHeight() {
+    const input = document.getElementById('user-input');
+    input.style.height = 'auto';
+}
 
 // ===== 页面初始化 =====
 loadResumeHistory();

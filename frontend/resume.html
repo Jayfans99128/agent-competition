@@ -132,12 +132,19 @@
                     <button class="quick-btn" onclick="resumeQuickAsk('帮我优化简历的措辞和表达')">措辞优化</button>
                     <button class="quick-btn" onclick="resumeQuickAsk('根据我的简历，我应该投递哪些岗位？')">岗位推荐</button>
                     <button class="quick-btn" onclick="resumeQuickAsk('针对我的项目经历，面试官可能会问什么？')">模拟面试</button>
+                    <button class="quick-btn download-highlight" onclick="downloadModifiedResumeFromResume()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        下载优化后简历
+                    </button>
                 </div>
             </div>
 
             <div class="input-area">
                 <div class="input-wrapper">
-                    <input type="text" id="user-input" placeholder="输入关于简历的问题..." autocomplete="off">
+                    <textarea id="user-input" placeholder="输入关于简历的问题..." rows="1"></textarea>
                     <button onclick="sendResumeMessage()" id="send-btn" class="send-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -145,7 +152,8 @@
                         </svg>
                     </button>
                 </div>
-                <p class="input-hint">按 Enter 发送消息</p>
+                <p class="input-hint">按 Enter 发送，Shift + Enter 换行</p>
+                <p class="ai-disclaimer">以上内容均为AI生成，仅供参考，内容不一定准确</p>
             </div>
         </main>
 

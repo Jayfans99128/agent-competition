@@ -171,23 +171,65 @@ function hideTyping() {
     }
 }
 
-// ===== 流式发送消息 =====
+// ===== 流式发送消息（含打断能力）=====
+let abortController = null;
+
+function setSendingState(sending) {
+    const btn = document.getElementById('send-btn');
+    if (!btn) return;
+    if (sending) {
+        btn.classList.add('sending');
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+        `;
+        btn.setAttribute('onclick', 'abortRequest()');
+    } else {
+        btn.classList.remove('sending');
+        btn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+        `;
+        btn.setAttribute('onclick', 'sendMessage()');
+    }
+}
+
+function abortRequest() {
+    if (abortController) {
+        abortController.abort();
+        abortController = null;
+    }
+    hideTyping();
+    setSendingState(false);
+}
+
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const text = input.value.trim();
     if (!text) return;
 
+    // 如果已在发送中，不允许重复点击
+    if (abortController) return;
+
     addMessage(text, 'user-message');
     ensureSession();
     saveHistoryItem(text, 'user');
     input.value = '';
+    resetInputHeight();
     showTyping();
+    setSendingState(true);
+
+    abortController = new AbortController();
 
     try {
         const resp = await fetch('/chat/stream', {
             method: 'POST',
             headers: authHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ message: text }),
+            signal: abortController.signal,
         });
 
         hideTyping();
@@ -220,11 +262,21 @@ async function sendMessage() {
                 }
             }
         }
-        saveHistoryItem(fullReply, 'assistant');
-        updateHistoryUI();
+
+        if (fullReply.trim()) {
+            saveHistoryItem(fullReply, 'assistant');
+            updateHistoryUI();
+        }
     } catch (error) {
-        hideTyping();
-        addMessage('连接后端失败，请确认服务已启动', 'bot-message');
+        if (error.name === 'AbortError') {
+            // 用户主动打断，不做额外提示
+        } else {
+            hideTyping();
+            addMessage('连接后端失败，请确认服务已启动', 'bot-message');
+        }
+    } finally {
+        abortController = null;
+        setSendingState(false);
     }
 }
 
@@ -282,6 +334,17 @@ document.getElementById('user-input').addEventListener('keydown', function (e) {
     }
 });
 
+// ===== 输入框自动增高 =====
+document.getElementById('user-input').addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+});
+
+function resetInputHeight() {
+    const input = document.getElementById('user-input');
+    input.style.height = 'auto';
+}
+
 function toggleMenu() {
     const menu = document.getElementById('popupMenu');
     menu.style.display = menu.style.display === 'none' || menu.style.display === '' ? 'flex' : 'none';
@@ -299,6 +362,204 @@ function switchMode(mode) {
     } else if (mode === 'job-search') {
         window.location.href = 'job-search.html';
     }
+}
+
+// ===== 职业性格测试（MBTI）=====
+let testQuestions = [];
+let testAnswers = {};
+let testCurrentPage = 0;
+let testPerPage = 5;
+
+async function openPersonalityTest() {
+    document.getElementById('popupMenu').style.display = 'none';
+    const overlay = document.getElementById('testOverlay');
+    const modal = document.getElementById('testModal');
+    overlay.classList.add('open');
+    modal.classList.add('open');
+    document.getElementById('testBody').innerHTML = '<div class="test-loading">加载题目中...</div>';
+
+    try {
+        const resp = await fetch('/api/personality-test/questions', { headers: authHeaders() });
+        const data = await resp.json();
+        testQuestions = data.questions;
+        testPerPage = data.perPage || 5;
+        testAnswers = {};
+        testCurrentPage = 0;
+        renderTestPage(0);
+    } catch (e) {
+        document.getElementById('testBody').innerHTML = '<div class="test-loading">加载失败，请重试</div>';
+    }
+}
+
+function closeTest() {
+    document.getElementById('testOverlay').classList.remove('open');
+    document.getElementById('testModal').classList.remove('open');
+}
+
+function renderTestPage(page) {
+    const total = testQuestions.length;
+    const perPage = testPerPage;
+    const start = page * perPage;
+    const end = Math.min(start + perPage, total);
+    const pageQuestions = testQuestions.slice(start, end);
+    const totalPages = Math.ceil(total / perPage);
+
+    let html = `
+        <div class="test-progress">
+            <div class="test-progress-bar">
+                <div class="test-progress-fill" style="width:${((page + 1) / totalPages) * 100}%"></div>
+            </div>
+            <span class="test-progress-text">${page + 1}/${totalPages}</span>
+        </div>
+        <div class="test-questions">
+    `;
+
+    pageQuestions.forEach(q => {
+        const val = testAnswers[q.id] || '';
+        html += `
+            <div class="test-question">
+                <div class="test-question-label">${q.id}. ${q.text}</div>
+                <div class="test-options-mbti" data-qid="${q.id}">
+                    <button class="test-opt-mbti ${val === 'A' ? 'active' : ''}" onclick="selectOption(${q.id}, 'A')">
+                        <span class="mbti-opt-label">A</span>
+                        <span class="mbti-opt-text">${q.optionA}</span>
+                    </button>
+                    <button class="test-opt-mbti ${val === 'B' ? 'active' : ''}" onclick="selectOption(${q.id}, 'B')">
+                        <span class="mbti-opt-label">B</span>
+                        <span class="mbti-opt-text">${q.optionB}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `</div><div class="test-nav">`;
+
+    if (page > 0) {
+        html += `<button class="test-btn test-btn-prev" onclick="prevPage()">← 上一页</button>`;
+    } else {
+        html += `<div></div>`;
+    }
+
+    if (end < total) {
+        const allAnswered = pageQuestions.every(q => testAnswers[q.id]);
+        html += `<button class="test-btn test-btn-next" onclick="nextPage()" ${allAnswered ? '' : 'disabled'}>下一页 →</button>`;
+    } else {
+        const allAnswered = pageQuestions.every(q => testAnswers[q.id]);
+        html += `<button class="test-btn test-btn-submit" onclick="submitTest()" ${allAnswered ? '' : 'disabled'}>查看结果</button>`;
+    }
+
+    html += '</div>';
+    document.getElementById('testBody').innerHTML = html;
+}
+
+function selectOption(qid, value) {
+    testAnswers[qid] = value;
+    const container = document.querySelector(`.test-options-mbti[data-qid="${qid}"]`);
+    if (container) {
+        const btns = container.querySelectorAll('.test-opt-mbti');
+        btns[0].classList.toggle('active', value === 'A');
+        btns[1].classList.toggle('active', value === 'B');
+    }
+    // 更新按钮状态
+    const total = testQuestions.length;
+    const end = Math.min((testCurrentPage + 1) * testPerPage, total);
+    const pageQuestions = testQuestions.slice(testCurrentPage * testPerPage, end);
+    const allAnswered = pageQuestions.every(q => testAnswers[q.id]);
+
+    if (end >= total) {
+        const submitBtn = document.querySelector('.test-btn-submit');
+        if (submitBtn) submitBtn.disabled = !allAnswered;
+    }
+    const nextBtn = document.querySelector('.test-btn-next');
+    if (nextBtn) nextBtn.disabled = !allAnswered;
+}
+
+function nextPage() {
+    testCurrentPage++;
+    renderTestPage(testCurrentPage);
+}
+
+function prevPage() {
+    testCurrentPage--;
+    renderTestPage(testCurrentPage);
+}
+
+async function submitTest() {
+    if (Object.keys(testAnswers).length < testQuestions.length) return;
+
+    document.getElementById('testBody').innerHTML = '<div class="test-loading">分析中，请稍候...</div>';
+
+    try {
+        const resp = await fetch('/api/personality-test/result', {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ answers: testAnswers }),
+        });
+        const data = await resp.json();
+        if (data.error) {
+            document.getElementById('testBody').innerHTML = `<div class="test-loading">${data.error}</div>`;
+            return;
+        }
+        renderResult(data);
+    } catch (e) {
+        document.getElementById('testBody').innerHTML = '<div class="test-loading">提交失败，请重试</div>';
+    }
+}
+
+function renderResult(data) {
+    let html = `
+        <div class="test-result">
+            <div class="test-result-code">${data.mbti_code}</div>
+            <div class="test-result-hint">${data.type_name} — 你的 MBTI 性格类型</div>
+            <p style="color:#cbd5e1;font-size:15px;line-height:1.7;margin-bottom:20px;text-align:left">${data.type_desc}</p>
+            <div class="test-result-dims">
+    `;
+
+    data.dimensions.forEach(d => {
+        const isA = d.winner === d.dim[0];
+        const pctA = d.pctA;
+        const pctB = d.pctB;
+        html += `
+            <div class="test-result-dim">
+                <div class="test-result-dim-header">
+                    <span class="test-result-dim-name">${d.winner_name}</span>
+                    <span class="test-result-dim-score">${d.winner}</span>
+                </div>
+                <div class="test-result-dim-bar">
+                    <div style="display:flex;gap:4px;height:8px">
+                        <div style="flex:${pctA};background:${isA ? 'linear-gradient(90deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.10)'};border-radius:4px 0 0 4px;transition:width 0.8s"></div>
+                        <div style="flex:${pctB};background:${!isA ? 'linear-gradient(90deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.10)'};border-radius:0 4px 4px 0;transition:width 0.8s"></div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;margin-bottom:6px">
+                    <span>${d.descA}</span>
+                    <span>${d.descB}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+            </div>
+            <div class="test-result-careers" style="text-align:left;margin-bottom:20px">
+                <p style="color:#cbd5e1;font-weight:600;margin-bottom:8px">🎯 推荐职业方向</p>
+                ${data.careers.map(c => `<span>${c}</span>`).join('')}
+            </div>
+            <div class="test-nav">
+                <button class="test-btn test-btn-restart" onclick="restartTest()">重新测试</button>
+                <button class="test-btn test-btn-next" onclick="closeTest()">完成</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('testBody').innerHTML = html;
+}
+
+function restartTest() {
+    testAnswers = {};
+    testCurrentPage = 0;
+    renderTestPage(0);
 }
 
 // ===== 页面初始化 =====

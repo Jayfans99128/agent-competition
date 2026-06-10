@@ -10,8 +10,8 @@ def parse_kaoyan_scores(url, year="2026", school_id="126"):
 
     Args:
         url (str): 目标网址
-        year (str): 年份，默认为2026
-        school_id (str): 学校ID，默认为126
+        year (str): 年份,默认为2026
+        school_id (str): 学校ID,默认为126
 
     Returns:
         str: 解析后的文本信息
