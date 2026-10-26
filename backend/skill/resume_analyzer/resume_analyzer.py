@@ -15,6 +15,7 @@ def analyze(filepath: str) -> dict:
 2. 不允许输出 markdown
 3. 不允许输出解释
 4. 缺失字段使用空字符串或空数组填充
+5. 再帮忙把用户能匹配上的岗位写出来，以及缺少的技能或者是匹配的技能
 返回格式：
 
 {{
@@ -22,7 +23,10 @@ def analyze(filepath: str) -> dict:
   "education": [],
   "skills": [],
   "projects": [],
-  "work_experience": []
+  "work_experience": [],
+  "matched_jobs": [],
+  "missing_skills": [],
+  "matched_skills": []
 }}
 
 
@@ -39,6 +43,7 @@ def analyze(filepath: str) -> dict:
             ]
         )
         test = response.choices[0].message.content
+        print("模型回复：", test)
 
         # 尝试提取 JSON：先试直接解析，再试从 markdown 代码块提取
         def extract_json(text):

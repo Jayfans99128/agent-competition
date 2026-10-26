@@ -15,6 +15,8 @@ from backend.agent import Agent
 from backend.config import client, MODEL, CHAT_TOOLS, RESUME_TOOLS, JOB_TOOLS
 from backend.tools import TOOL_MAP
 from backend.personality_test import QUESTIONS, calculate_result, QUESTIONS_PER_PAGE
+from backend import db
+from backend import vector_store
 
 # ---------- 日志 ----------
 LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
@@ -213,9 +215,8 @@ JOB_PROMPT = """你是一位职位搜索与推荐专家，服务对象是在校�
 使用中文回复。"""
 
 # ----- 用户隔离的 Agent 实例 -----
-user_agents = {}  # {user_id: {"chat": Agent, "resume": Agent, "job": Agent, "interview": Agent}}
-user_resumes = {}  # {user_id: raw_resume_text}  存储用户的简历原文
-user_resume_injected = {}  # {user_id: bool}  标记是否已将简历注入面试 agent
+# 改为：内存缓存 Agent 对象，对话历史持久化到 MySQL
+_user_agents = {}  # {user_id: {"chat": Agent, "resume": Agent, "job": Agent, "interview": Agent}}
 
 
 def _get_user_id():
@@ -224,15 +225,21 @@ def _get_user_id():
 
 
 def _get_user_agents(user_id):
-    """获取或创建某个用户的 Agent 实例"""
-    if user_id not in user_agents:
-        user_agents[user_id] = {
+    """获取或创建某个用户的 Agent 实例，并从 MySQL 加载历史"""
+    if user_id not in _user_agents:
+        _user_agents[user_id] = {
             "chat": Agent(client=client, model=MODEL, system_prompt=CHAT_PROMPT, tools=CHAT_TOOLS, tool_map=TOOL_MAP),
             "resume": Agent(client=client, model=MODEL, system_prompt=RESUME_PROMPT, tools=RESUME_TOOLS, tool_map=TOOL_MAP),
             "job": Agent(client=client, model=MODEL, system_prompt=JOB_PROMPT, tools=JOB_TOOLS, tool_map=TOOL_MAP),
             "interview": Agent(client=client, model=MODEL, system_prompt=INTERVIEW_PROMPT, tools=[], tool_map=TOOL_MAP),
         }
-    return user_agents[user_id]
+        # 从 MySQL 恢复历史
+        for agent_type in ("chat", "resume", "job", "interview"):
+            saved = db.get_history(user_id, agent_type)
+            if saved:
+                _user_agents[user_id][agent_type].history = saved
+
+    return _user_agents[user_id]
 
 
 # ----- 文件文本提取 -----
@@ -264,8 +271,11 @@ def chat_api():
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
 
-    agents = _get_user_agents(_get_user_id())
+    user_id = _get_user_id()
+    agents = _get_user_agents(user_id)
     reply = agents["chat"].chat(user_message)
+    # 持久化历史到 MySQL
+    db.save_history(user_id, "chat", agents["chat"].history)
     return jsonify({"reply": reply})
 
 
@@ -309,8 +319,10 @@ def resume_chat():
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
 
-    agents = _get_user_agents(_get_user_id())
+    user_id = _get_user_id()
+    agents = _get_user_agents(user_id)
     reply = agents["resume"].chat(user_message)
+    db.save_history(user_id, "resume", agents["resume"].history)
     return jsonify({"reply": reply})
 
 
@@ -321,8 +333,10 @@ def job_chat():
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
 
-    agents = _get_user_agents(_get_user_id())
+    user_id = _get_user_id()
+    agents = _get_user_agents(user_id)
     reply = agents["job"].chat(user_message)
+    db.save_history(user_id, "job", agents["job"].history)
     return jsonify({"reply": reply})
 
 
@@ -382,10 +396,9 @@ def upload_resume():
     if os.path.exists(filepath):
         os.remove(filepath)
 
-    # 存储简历原文，供面试等模块使用
+    # 存储简历原文到 MySQL，供面试等模块使用
     user_id = _get_user_id()
-    user_resumes[user_id] = content
-    user_resume_injected[user_id] = False  # 重置注入标记
+    db.set_resume(user_id, content)
 
     agents = _get_user_agents(user_id)
     agents["resume"].history.append({
@@ -408,7 +421,7 @@ def upload_resume():
 def get_resume():
     """获取当前用户已上传的简历原文"""
     user_id = _get_user_id()
-    resume_text = user_resumes.get(user_id, "")
+    resume_text = db.get_resume(user_id)
     return jsonify({
         "has_resume": bool(resume_text),
         "resume_text": resume_text,
@@ -468,9 +481,15 @@ def chat_stream_api():
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
-    agents = _get_user_agents(_get_user_id())
+    user_id = _get_user_id()
+    agents = _get_user_agents(user_id)
+    def _stream_and_persist():
+        for chunk in _stream_reply(agents["chat"], user_message):
+            yield chunk
+        # 流结束后持久化历史
+        db.save_history(user_id, "chat", agents["chat"].history)
     return Response(
-        stream_with_context(_stream_reply(agents["chat"], user_message)),
+        stream_with_context(_stream_and_persist()),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
@@ -482,9 +501,14 @@ def resume_chat_stream_api():
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
-    agents = _get_user_agents(_get_user_id())
+    user_id = _get_user_id()
+    agents = _get_user_agents(user_id)
+    def _stream_and_persist():
+        for chunk in _stream_reply(agents["resume"], user_message):
+            yield chunk
+        db.save_history(user_id, "resume", agents["resume"].history)
     return Response(
-        stream_with_context(_stream_reply(agents["resume"], user_message)),
+        stream_with_context(_stream_and_persist()),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
@@ -496,9 +520,14 @@ def job_chat_stream_api():
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({"error": "消息不能为空"}), 400
-    agents = _get_user_agents(_get_user_id())
+    user_id = _get_user_id()
+    agents = _get_user_agents(user_id)
+    def _stream_and_persist():
+        for chunk in _stream_reply(agents["job"], user_message):
+            yield chunk
+        db.save_history(user_id, "job", agents["job"].history)
     return Response(
-        stream_with_context(_stream_reply(agents["job"], user_message)),
+        stream_with_context(_stream_and_persist()),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
@@ -515,8 +544,8 @@ def interview_stream_api():
     agents = _get_user_agents(user_id)
 
     # 如果用户有上传简历且尚未注入到面试 agent，则注入简历上下文
-    resume_text = user_resumes.get(user_id, "")
-    if resume_text and not user_resume_injected.get(user_id, False):
+    resume_text = db.get_resume(user_id)
+    if resume_text and not db.get_resume_injected(user_id):
         agents["interview"].history.append({
             "role": "user",
             "content": f"【以下是我的个人简历，请在面试中围绕简历内容进行提问】\n\n{resume_text}"
@@ -525,10 +554,14 @@ def interview_stream_api():
             "role": "assistant",
             "content": "收到，我已了解你的简历背景，会结合你的经历进行针对性提问。"
         })
-        user_resume_injected[user_id] = True
+        db.set_resume_injected(user_id, True)
 
+    def _stream_and_persist():
+        for chunk in _stream_reply(agents["interview"], user_message):
+            yield chunk
+        db.save_history(user_id, "interview", agents["interview"].history)
     return Response(
-        stream_with_context(_stream_reply(agents["interview"], user_message)),
+        stream_with_context(_stream_and_persist()),
         mimetype="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
@@ -539,7 +572,7 @@ def interview_stream_api():
 def modify_resume():
     """基于模板简历.docx 生成优化后的简历 DOCX 文件"""
     user_id = _get_user_id()
-    resume_text = user_resumes.get(user_id, "")
+    resume_text = db.get_resume(user_id)
 
     data = request.json or {}
     # 也支持直接传入简历文本（从面试页面等）
@@ -666,6 +699,18 @@ if __name__ == "__main__":
         local_ip = s.getsockname()[0]
     finally:
         s.close()
+
+    # 初始化 MySQL
+    try:
+        db.init_db()
+    except Exception as e:
+        logger.error("❌ MySQL 初始化失败: %s（将回退到内存模式）", e)
+
+    # 构建向量索引
+    try:
+        vector_store.build_indices()
+    except Exception as e:
+        logger.error("❌ 向量索引构建失败: %s", e)
 
     logger.info("=" * 50)
     logger.info("🐷 职小猪 启动中...")

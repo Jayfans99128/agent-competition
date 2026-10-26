@@ -6,6 +6,20 @@ from backend.knowledge_base import query_knowledge_base, query_kaoyan_scores, qu
 from backend.doubao_client import query_doubao
 from backend.knowledge_base.kaoyan_manager import query_kaoyan_data
 from backend.knowledge_base.kaoyan_parser import parse_kaoyan_scores, query_kaoyan_scores_with_parser
+from backend.vector_store import search_all, search_knowledge_base, search_kaoyan, search_guokao
+
+
+def _vector_search(query: str, scope: str = "all") -> str:
+    """向量语义检索入口"""
+    scope_map = {
+        "all": search_all,
+        "job": search_knowledge_base,
+        "kaoyan": search_kaoyan,
+        "guokao": search_guokao,
+    }
+    fn = scope_map.get(scope, search_all)
+    return fn(query)
+
 
 TOOL_MAP = {
     "list_files": list_files,
@@ -20,4 +34,5 @@ TOOL_MAP = {
     "query_kaoyan_data": query_kaoyan_data,
     "parse_kaoyan_scores": parse_kaoyan_scores,
     "query_kaoyan_scores_with_parser": query_kaoyan_scores_with_parser,
+    "vector_search": _vector_search,
 }
